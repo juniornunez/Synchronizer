@@ -1,0 +1,474 @@
+{
+    "master": {
+        "host": "localhost",
+        "port": 5432,
+        "database": "pagila",
+        "user": "postgres",
+        "password": "admin123"
+    },
+    "slave": {
+        "server": "DESKTOP-S4DNI64",
+        "database": "pagila_slave",
+        "trustedConnection": true,
+        "trustServerCertificate": true
+    },
+    "tablesIN": [
+        {
+            "name": "language",
+            "masterTable": "language",
+            "slaveTable": "language",
+            "primaryKey": "language_id",
+            "columns": [
+                {
+                    "master": "language_id",
+                    "slave": "language_id"
+                },
+                {
+                    "master": "name",
+                    "slave": "name"
+                },
+                {
+                    "master": "last_update",
+                    "slave": "last_update"
+                }
+            ]
+        },
+        {
+            "name": "actor",
+            "masterTable": "actor",
+            "slaveTable": "actor",
+            "primaryKey": "actor_id",
+            "columns": [
+                {
+                    "master": "actor_id",
+                    "slave": "actor_id"
+                },
+                {
+                    "master": "first_name",
+                    "slave": "first_name"
+                },
+                {
+                    "master": "last_name",
+                    "slave": "last_name"
+                },
+                {
+                    "master": "last_update",
+                    "slave": "last_update"
+                }
+            ]
+        },
+        {
+            "name": "category",
+            "masterTable": "category",
+            "slaveTable": "category",
+            "primaryKey": "category_id",
+            "columns": [
+                {
+                    "master": "category_id",
+                    "slave": "category_id"
+                },
+                {
+                    "master": "name",
+                    "slave": "name"
+                },
+                {
+                    "master": "last_update",
+                    "slave": "last_update"
+                }
+            ]
+        },
+        {
+            "name": "film",
+            "masterTable": "film",
+            "slaveTable": "film",
+            "primaryKey": "film_id",
+            "columns": [
+                {
+                    "master": "film_id",
+                    "slave": "film_id"
+                },
+                {
+                    "master": "title",
+                    "slave": "title"
+                },
+                {
+                    "master": "description",
+                    "slave": "description"
+                },
+                {
+                    "master": "release_year",
+                    "slave": "release_year"
+                },
+                {
+                    "master": "language_id",
+                    "slave": "language_id"
+                },
+                {
+                    "master": "rental_duration",
+                    "slave": "rental_duration"
+                },
+                {
+                    "master": "rental_rate",
+                    "slave": "rental_rate"
+                },
+                {
+                    "master": "length",
+                    "slave": "length"
+                },
+                {
+                    "master": "replacement_cost",
+                    "slave": "replacement_cost"
+                },
+                {
+                    "master": "rating",
+                    "slave": "rating"
+                },
+                {
+                    "master": "last_update",
+                    "slave": "last_update"
+                },
+                {
+                    "master": "special_features",
+                    "slave": "special_features"
+                }
+            ]
+        },
+        {
+            "name": "film_actor",
+            "masterTable": "film_actor",
+            "slaveTable": "film_actor",
+            "primaryKey": "actor_id,film_id",
+            "columns": [
+                {
+                    "master": "actor_id",
+                    "slave": "actor_id"
+                },
+                {
+                    "master": "film_id",
+                    "slave": "film_id"
+                },
+                {
+                    "master": "last_update",
+                    "slave": "last_update"
+                }
+            ]
+        },
+        {
+            "name": "film_category",
+            "masterTable": "film_category",
+            "slaveTable": "film_category",
+            "primaryKey": "film_id,category_id",
+            "columns": [
+                {
+                    "master": "film_id",
+                    "slave": "film_id"
+                },
+                {
+                    "master": "category_id",
+                    "slave": "category_id"
+                },
+                {
+                    "master": "last_update",
+                    "slave": "last_update"
+                }
+            ]
+        },
+        {
+            "name": "country",
+            "masterTable": "country",
+            "slaveTable": "country",
+            "primaryKey": "country_id",
+            "columns": [
+                {
+                    "master": "country_id",
+                    "slave": "country_id"
+                },
+                {
+                    "master": "country",
+                    "slave": "country"
+                },
+                {
+                    "master": "last_update",
+                    "slave": "last_update"
+                }
+            ]
+        },
+        {
+            "name": "city",
+            "masterTable": "city",
+            "slaveTable": "city",
+            "primaryKey": "city_id",
+            "columns": [
+                {
+                    "master": "city_id",
+                    "slave": "city_id"
+                },
+                {
+                    "master": "city",
+                    "slave": "city"
+                },
+                {
+                    "master": "country_id",
+                    "slave": "country_id"
+                },
+                {
+                    "master": "last_update",
+                    "slave": "last_update"
+                }
+            ]
+        },
+        {
+            "name": "address",
+            "masterTable": "address",
+            "slaveTable": "address",
+            "primaryKey": "address_id",
+            "columns": [
+                {
+                    "master": "address_id",
+                    "slave": "address_id"
+                },
+                {
+                    "master": "address",
+                    "slave": "address"
+                },
+                {
+                    "master": "address2",
+                    "slave": "address2"
+                },
+                {
+                    "master": "district",
+                    "slave": "district"
+                },
+                {
+                    "master": "city_id",
+                    "slave": "city_id"
+                },
+                {
+                    "master": "postal_code",
+                    "slave": "postal_code"
+                },
+                {
+                    "master": "phone",
+                    "slave": "phone"
+                },
+                {
+                    "master": "last_update",
+                    "slave": "last_update"
+                }
+            ]
+        },
+        {
+            "name": "store",
+            "masterTable": "store",
+            "slaveTable": "store",
+            "primaryKey": "store_id",
+            "columns": [
+                {
+                    "master": "store_id",
+                    "slave": "store_id"
+                },
+                {
+                    "master": "manager_staff_id",
+                    "slave": "manager_staff_id"
+                },
+                {
+                    "master": "address_id",
+                    "slave": "address_id"
+                },
+                {
+                    "master": "last_update",
+                    "slave": "last_update"
+                }
+            ]
+        },
+        {
+            "name": "staff",
+            "masterTable": "staff",
+            "slaveTable": "staff",
+            "primaryKey": "staff_id",
+            "columns": [
+                {
+                    "master": "staff_id",
+                    "slave": "staff_id"
+                },
+                {
+                    "master": "first_name",
+                    "slave": "first_name"
+                },
+                {
+                    "master": "last_name",
+                    "slave": "last_name"
+                },
+                {
+                    "master": "address_id",
+                    "slave": "address_id"
+                },
+                {
+                    "master": "email",
+                    "slave": "email"
+                },
+                {
+                    "master": "store_id",
+                    "slave": "store_id"
+                },
+                {
+                    "master": "active",
+                    "slave": "active"
+                },
+                {
+                    "master": "username",
+                    "slave": "username"
+                },
+                {
+                    "master": "last_update",
+                    "slave": "last_update"
+                }
+            ]
+        },
+        {
+            "name": "inventory",
+            "masterTable": "inventory",
+            "slaveTable": "inventory",
+            "primaryKey": "inventory_id",
+            "columns": [
+                {
+                    "master": "inventory_id",
+                    "slave": "inventory_id"
+                },
+                {
+                    "master": "film_id",
+                    "slave": "film_id"
+                },
+                {
+                    "master": "store_id",
+                    "slave": "store_id"
+                },
+                {
+                    "master": "last_update",
+                    "slave": "last_update"
+                }
+            ]
+        }
+    ],
+    "tablesOUT": [
+        {
+            "name": "customer",
+            "masterTable": "customer",
+            "slaveTable": "customer",
+            "logTable": "customer_log",
+            "primaryKey": "customer_id",
+            "columns": [
+                {
+                    "master": "customer_id",
+                    "slave": "customer_id"
+                },
+                {
+                    "master": "store_id",
+                    "slave": "store_id"
+                },
+                {
+                    "master": "first_name",
+                    "slave": "first_name"
+                },
+                {
+                    "master": "last_name",
+                    "slave": "last_name"
+                },
+                {
+                    "master": "email",
+                    "slave": "email"
+                },
+                {
+                    "master": "address_id",
+                    "slave": "address_id"
+                },
+                {
+                    "master": "activebool",
+                    "slave": "activebool"
+                },
+                {
+                    "master": "create_date",
+                    "slave": "create_date"
+                },
+                {
+                    "master": "last_update",
+                    "slave": "last_update"
+                },
+                {
+                    "master": "active",
+                    "slave": "active"
+                }
+            ]
+        },
+        {
+            "name": "rental",
+            "masterTable": "rental",
+            "slaveTable": "rental",
+            "logTable": "rental_log",
+            "primaryKey": "rental_id",
+            "columns": [
+                {
+                    "master": "rental_id",
+                    "slave": "rental_id"
+                },
+                {
+                    "master": "rental_date",
+                    "slave": "rental_date"
+                },
+                {
+                    "master": "inventory_id",
+                    "slave": "inventory_id"
+                },
+                {
+                    "master": "customer_id",
+                    "slave": "customer_id"
+                },
+                {
+                    "master": "return_date",
+                    "slave": "return_date"
+                },
+                {
+                    "master": "staff_id",
+                    "slave": "staff_id"
+                },
+                {
+                    "master": "last_update",
+                    "slave": "last_update"
+                }
+            ]
+        },
+        {
+            "name": "payment",
+            "masterTable": "payment",
+            "slaveTable": "payment",
+            "logTable": "payment_log",
+            "primaryKey": "payment_id",
+            "columns": [
+                {
+                    "master": "payment_id",
+                    "slave": "payment_id"
+                },
+                {
+                    "master": "customer_id",
+                    "slave": "customer_id"
+                },
+                {
+                    "master": "staff_id",
+                    "slave": "staff_id"
+                },
+                {
+                    "master": "rental_id",
+                    "slave": "rental_id"
+                },
+                {
+                    "master": "amount",
+                    "slave": "amount"
+                },
+                {
+                    "master": "payment_date",
+                    "slave": "payment_date"
+                }
+            ]
+        }
+    ]
+}

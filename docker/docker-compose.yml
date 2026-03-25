@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  postgres_master:
+    image: postgres:15
+    container_name: pagila_master
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: pagila
+    ports:
+      - "5432:5432"
+    volumes:
+      - pagila_data:/var/lib/postgresql/data
+      - ./pagila-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./pagila-data.sql:/docker-entrypoint-initdb.d/02-data.sql
+    restart: unless-stopped
+
+volumes:
+  pagila_data:

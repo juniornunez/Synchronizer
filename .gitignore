@@ -1,0 +1,4 @@
+.vs/ 
+PagilaSynchronizer/bin/ 
+PagilaSynchronizer/obj/ 
+docker/pagila-data.sql 
