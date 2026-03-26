@@ -14,13 +14,11 @@ namespace PagilaSynchronizer.Controllers
             _mapping = mapping;
         }
 
-        // ── Dashboard principal ────────────────────────────────────────────────
         public IActionResult Index()
         {
             return View();
         }
 
-        // ── Ejecutar Sync-IN (MASTER → SLAVE) ─────────────────────────────────
         [HttpPost]
         public async Task<IActionResult> SyncIn()
         {
@@ -28,7 +26,7 @@ namespace PagilaSynchronizer.Controllers
             return Json(results);
         }
 
-        // ── Ejecutar Sync-OUT (SLAVE → MASTER) ────────────────────────────────
+       
         [HttpPost]
         public async Task<IActionResult> SyncOut()
         {
@@ -36,7 +34,7 @@ namespace PagilaSynchronizer.Controllers
             return Json(results);
         }
 
-        // ── Estado de conexiones ───────────────────────────────────────────────
+        
         [HttpGet]
         public async Task<IActionResult> Status()
         {

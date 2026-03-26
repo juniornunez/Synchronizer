@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PagilaSynchronizer")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9ff91b771d9e778bca63074211aa1d982ebb8dee")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1a775d26e0d715371113d63723ccfb3ebfb485ec")]
 [assembly: System.Reflection.AssemblyProductAttribute("PagilaSynchronizer")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PagilaSynchronizer")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
