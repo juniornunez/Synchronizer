@@ -133,3 +133,4 @@ C:\Proyectos\Proyecto2_TBD2\PagilaSynchronizer\PagilaSynchronizer\obj\Debug\net1
 C:\Proyectos\Proyecto2_TBD2\PagilaSynchronizer\PagilaSynchronizer\obj\Debug\net10.0\PagilaSynchronizer.pdb
 C:\Proyectos\Proyecto2_TBD2\PagilaSynchronizer\PagilaSynchronizer\obj\Debug\net10.0\PagilaSynchronizer.genruntimeconfig.cache
 C:\Proyectos\Proyecto2_TBD2\PagilaSynchronizer\PagilaSynchronizer\obj\Debug\net10.0\ref\PagilaSynchronizer.dll
+C:\Proyectos\Proyecto2_TBD2\PagilaSynchronizer\PagilaSynchronizer\obj\Debug\net10.0\PagilaSynchronizer.sourcelink.json
