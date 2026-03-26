@@ -15,267 +15,269 @@ namespace PagilaSynchronizer.Services
 
     public class SyncService
     {
-        private readonly MappingService _mapping;
+        private readonly MappingService _mappingService;
         private readonly ILogger<SyncService> _logger;
 
-        // Orden correcto para borrar (inverso a FK) y para insertar
-        private static readonly List<string> DeleteOrder = new()
+        private static readonly List<string> TodasLasTablas = new()
         {
+            "payment", "rental", "customer",
             "inventory", "film_category", "film_actor",
-            "staff", "store", "address", "city", "country",
+            "store", "staff", "address", "city", "country",
             "film", "category", "actor", "language"
         };
 
-        private static readonly List<string> InsertOrder = new()
+        private static readonly List<string> OrdenInsercion = new()
         {
             "language", "actor", "category", "film",
             "film_actor", "film_category",
             "country", "city", "address",
-            "store", "staff", "inventory"
+            "staff", "store", "inventory"
         };
 
-        public SyncService(MappingService mapping, ILogger<SyncService> logger)
+        public SyncService(MappingService mappingService, ILogger<SyncService> logger)
         {
-            _mapping = mapping;
+            _mappingService = mappingService;
             _logger = logger;
         }
 
-        // ══════════════════════════════════════════════════════════════════════
-        // SYNC-IN: PostgreSQL (MASTER) → SQL Server (SLAVE)
-        // ══════════════════════════════════════════════════════════════════════
         public async Task<List<SyncResult>> SyncInAsync()
         {
-            var results = new List<SyncResult>();
+            var resultados = new List<SyncResult>();
 
-            using var pgConn = new NpgsqlConnection(_mapping.GetMasterConnectionString());
-            using var sqlConn = new SqlConnection(_mapping.GetSlaveConnectionString());
+            using var conexionMaster = new NpgsqlConnection(_mappingService.GetMasterConnectionString());
+            using var conexionSlave = new SqlConnection(_mappingService.GetSlaveConnectionString());
 
-            await pgConn.OpenAsync();
-            await sqlConn.OpenAsync();
+            await conexionMaster.OpenAsync();
+            await conexionSlave.OpenAsync();
 
-            // Deshabilitar FK constraints tabla por tabla
-            var allTables = DeleteOrder.ToList();
-            foreach (var t in allTables)
+            DeshabilitarConstraints(conexionSlave);
+            BorrarTablas(conexionSlave);
+
+            foreach (var nombreTabla in OrdenInsercion)
             {
+                var tabla = _mappingService.Mapping.TablesIN.FirstOrDefault(t => t.Name == nombreTabla);
+                if (tabla == null) continue;
+
+                var resultado = new SyncResult { TableName = tabla.Name, Operation = "SYNC-IN" };
                 try
                 {
-                    await using var cmd = new SqlCommand($"ALTER TABLE {t} NOCHECK CONSTRAINT ALL", sqlConn);
-                    await cmd.ExecuteNonQueryAsync();
-                }
-                catch { /* tabla puede no existir, ignorar */ }
-            }
+                    var columnasMaster = string.Join(", ", tabla.Columns.Select(c => $"\"{c.Master}\""));
+                    var datos = new DataTable();
 
-            // Borrar en orden inverso
-            foreach (var tableName in DeleteOrder)
-            {
-                var table = _mapping.Mapping.TablesIN.FirstOrDefault(t => t.Name == tableName);
-                if (table == null) continue;
-                try
-                {
-                    await using var delCmd = new SqlCommand($"DELETE FROM {table.SlaveTable}", sqlConn);
-                    await delCmd.ExecuteNonQueryAsync();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning("No se pudo borrar {Table}: {Msg}", tableName, ex.Message);
-                }
-            }
-
-            // Insertar en orden correcto
-            foreach (var tableName in InsertOrder)
-            {
-                var table = _mapping.Mapping.TablesIN.FirstOrDefault(t => t.Name == tableName);
-                if (table == null) continue;
-
-                var result = new SyncResult { TableName = table.Name, Operation = "SYNC-IN" };
-                try
-                {
-                    // Leer datos del MASTER
-                    var masterCols = string.Join(", ", table.Columns.Select(c => $"\"{c.Master}\""));
-                    var dt = new DataTable();
-
-                    await using (var pgCmd = new NpgsqlCommand($"SELECT {masterCols} FROM {table.MasterTable}", pgConn))
-                    await using (var reader = await pgCmd.ExecuteReaderAsync())
+                    await using (var query = new NpgsqlCommand($"SELECT {columnasMaster} FROM {tabla.MasterTable}", conexionMaster))
+                    await using (var reader = await query.ExecuteReaderAsync())
                     {
-                        dt.Load(reader);
+                        datos.Load(reader);
                     }
 
-                    // Insertar en SLAVE
-                    var slaveCols = string.Join(", ", table.Columns.Select(c => c.Slave));
-                    var slaveParams = string.Join(", ", table.Columns.Select(c => $"@{c.Slave}"));
-                    var insertSql = $"INSERT INTO {table.SlaveTable} ({slaveCols}) VALUES ({slaveParams})";
+                    var columnasSlave = string.Join(", ", tabla.Columns.Select(c => c.Slave));
+                    var parametros = string.Join(", ", tabla.Columns.Select(c => $"@{c.Slave}"));
+                    var sqlInsertar = $"INSERT INTO {tabla.SlaveTable} ({columnasSlave}) VALUES ({parametros})";
 
-                    int rows = 0;
-                    foreach (DataRow row in dt.Rows)
+                    int filas = 0;
+                    foreach (DataRow fila in datos.Rows)
                     {
-                        await using var insCmd = new SqlCommand(insertSql, sqlConn);
-                        foreach (var col in table.Columns)
+                        await using var comando = new SqlCommand(sqlInsertar, conexionSlave);
+                        foreach (var col in tabla.Columns)
                         {
-                            var val = row[col.Master];
-                            // Convertir arrays de PostgreSQL a string (ej: special_features)
-                            if (val is Array arr)
-                                val = string.Join(", ", arr.Cast<object>().Select(o => o?.ToString() ?? ""));
+                            var valor = fila[col.Master];
+                            if (valor is Array arr)
+                                valor = string.Join(", ", arr.Cast<object>().Select(o => o?.ToString() ?? ""));
 
-                            insCmd.Parameters.AddWithValue($"@{col.Slave}", val == DBNull.Value ? DBNull.Value : val);
+                            comando.Parameters.AddWithValue($"@{col.Slave}", valor == DBNull.Value ? DBNull.Value : valor);
                         }
-                        await insCmd.ExecuteNonQueryAsync();
-                        rows++;
+                        await comando.ExecuteNonQueryAsync();
+                        filas++;
                     }
 
-                    result.Success = true;
-                    result.RowsAffected = rows;
-                    result.Message = $"{rows} filas sincronizadas correctamente.";
+                    resultado.Success = true;
+                    resultado.RowsAffected = filas;
+                    resultado.Message = $"{filas} filas sincronizadas correctamente.";
                 }
                 catch (Exception ex)
                 {
-                    result.Success = false;
-                    result.Message = ex.Message;
-                    _logger.LogError(ex, "SYNC-IN error en tabla {Table}", table.Name);
+                    resultado.Success = false;
+                    resultado.Message = ex.Message;
+                    _logger.LogError(ex, "Error en Sync-IN tabla {Tabla}", tabla.Name);
                 }
 
-                results.Add(result);
+                resultados.Add(resultado);
             }
 
-            // Re-habilitar FK constraints tabla por tabla (sin validar datos viejos)
-            foreach (var t in allTables)
-            {
-                try
-                {
-                    await using var cmd = new SqlCommand($"ALTER TABLE {t} WITH NOCHECK CHECK CONSTRAINT ALL", sqlConn);
-                    await cmd.ExecuteNonQueryAsync();
-                }
-                catch { /* ignorar */ }
-            }
+            HabilitarConstraints(conexionSlave);
 
-            return results;
+            return resultados;
         }
 
-        // ══════════════════════════════════════════════════════════════════════
-        // SYNC-OUT: SQL Server SLAVE (_log) → PostgreSQL MASTER
-        // ══════════════════════════════════════════════════════════════════════
         public async Task<List<SyncResult>> SyncOutAsync()
         {
-            var results = new List<SyncResult>();
+            var resultados = new List<SyncResult>();
 
-            using var pgConn = new NpgsqlConnection(_mapping.GetMasterConnectionString());
-            using var sqlConn = new SqlConnection(_mapping.GetSlaveConnectionString());
+            using var conexionMaster = new NpgsqlConnection(_mappingService.GetMasterConnectionString());
+            using var conexionSlave = new SqlConnection(_mappingService.GetSlaveConnectionString());
 
-            await pgConn.OpenAsync();
-            await sqlConn.OpenAsync();
+            await conexionMaster.OpenAsync();
+            await conexionSlave.OpenAsync();
 
-            foreach (var table in _mapping.Mapping.TablesOUT)
+            foreach (var tabla in _mappingService.Mapping.TablesOUT)
             {
-                var result = new SyncResult { TableName = table.Name, Operation = "SYNC-OUT" };
+                var resultado = new SyncResult { TableName = tabla.Name, Operation = "SYNC-OUT" };
                 try
                 {
-                    var dt = new DataTable();
-                    await using (var logCmd = new SqlCommand($"SELECT * FROM {table.LogTable} ORDER BY log_id ASC", sqlConn))
-                    await using (var reader = await logCmd.ExecuteReaderAsync())
+                    var datos = new DataTable();
+                    await using (var queryLog = new SqlCommand($"SELECT * FROM {tabla.LogTable} ORDER BY log_id ASC", conexionSlave))
+                    await using (var reader = await queryLog.ExecuteReaderAsync())
                     {
-                        dt.Load(reader);
+                        datos.Load(reader);
                     }
 
-                    if (dt.Rows.Count == 0)
+                    if (datos.Rows.Count == 0)
                     {
-                        result.Success = true;
-                        result.Message = "Sin cambios pendientes.";
-                        results.Add(result);
+                        resultado.Success = true;
+                        resultado.Message = "Sin cambios pendientes.";
+                        resultados.Add(resultado);
                         continue;
                     }
 
-                    int rows = 0;
-                    var pks = table.PrimaryKey.Split(',').Select(p => p.Trim()).ToList();
+                    int filas = 0;
+                    var clavesPrimarias = tabla.PrimaryKey.Split(',').Select(p => p.Trim()).ToList();
 
-                    foreach (DataRow row in dt.Rows)
+                    foreach (DataRow fila in datos.Rows)
                     {
-                        var operation = row["operation"].ToString()!.Trim().ToUpper();
+                        var operacion = fila["operation"].ToString()!.Trim().ToUpper();
                         try
                         {
-                            if (operation == "INSERT" || operation == "UPDATE")
+                            if (operacion == "INSERT" || operacion == "UPDATE")
                             {
-                                var pkCondition = string.Join(" AND ", pks.Select(pk => $"{pk} = @{pk}"));
-                                await using var existsCmd = new NpgsqlCommand(
-                                    $"SELECT COUNT(1) FROM {table.MasterTable} WHERE {pkCondition}", pgConn);
-                                foreach (var pk in pks)
-                                    existsCmd.Parameters.AddWithValue($"@{pk}", GetRowValue(row, table, pk));
+                                var condicionPK = string.Join(" AND ", clavesPrimarias.Select(pk => $"{pk} = @{pk}"));
 
-                                var count = (long)(await existsCmd.ExecuteScalarAsync() ?? 0L);
+                                await using var cmdExiste = new NpgsqlCommand(
+                                    $"SELECT COUNT(1) FROM {tabla.MasterTable} WHERE {condicionPK}", conexionMaster);
+                                foreach (var pk in clavesPrimarias)
+                                    cmdExiste.Parameters.AddWithValue($"@{pk}", ObtenerValor(fila, tabla, pk));
 
-                                if (count > 0)
+                                var cantidad = (long)(await cmdExiste.ExecuteScalarAsync() ?? 0L);
+
+                                if (cantidad > 0)
                                 {
-                                    var setClauses = table.Columns
-                                        .Where(c => !pks.Contains(c.Master))
+                                    var sets = tabla.Columns
+                                        .Where(c => !clavesPrimarias.Contains(c.Master))
                                         .Select(c => $"{c.Master} = @{c.Master}");
-                                    await using var updCmd = new NpgsqlCommand(
-                                        $"UPDATE {table.MasterTable} SET {string.Join(", ", setClauses)} WHERE {pkCondition}", pgConn);
-                                    foreach (var col in table.Columns)
-                                        updCmd.Parameters.AddWithValue($"@{col.Master}", GetRowValue(row, table, col.Master));
-                                    await updCmd.ExecuteNonQueryAsync();
+
+                                    await using var cmdUpdate = new NpgsqlCommand(
+                                        $"UPDATE {tabla.MasterTable} SET {string.Join(", ", sets)} WHERE {condicionPK}", conexionMaster);
+                                    foreach (var col in tabla.Columns)
+                                        cmdUpdate.Parameters.AddWithValue($"@{col.Master}", ObtenerValor(fila, tabla, col.Master));
+                                    await cmdUpdate.ExecuteNonQueryAsync();
                                 }
                                 else
                                 {
-                                    var cols = table.Columns.Select(c => c.Master).ToList();
-                                    var colList = string.Join(", ", cols);
-                                    var paramList = string.Join(", ", cols.Select(c => $"@{c}"));
-                                    await using var insCmd = new NpgsqlCommand(
-                                        $"INSERT INTO {table.MasterTable} ({colList}) VALUES ({paramList})", pgConn);
-                                    foreach (var col in table.Columns)
-                                        insCmd.Parameters.AddWithValue($"@{col.Master}", GetRowValue(row, table, col.Master));
-                                    await insCmd.ExecuteNonQueryAsync();
+                                    var cols = string.Join(", ", tabla.Columns.Select(c => c.Master));
+                                    var vals = string.Join(", ", tabla.Columns.Select(c => $"@{c.Master}"));
+
+                                    await using var cmdInsert = new NpgsqlCommand(
+                                        $"INSERT INTO {tabla.MasterTable} ({cols}) VALUES ({vals})", conexionMaster);
+                                    foreach (var col in tabla.Columns)
+                                        cmdInsert.Parameters.AddWithValue($"@{col.Master}", ObtenerValor(fila, tabla, col.Master));
+                                    await cmdInsert.ExecuteNonQueryAsync();
                                 }
                             }
-                            else if (operation == "DELETE")
+                            else if (operacion == "DELETE")
                             {
-                                var pkCondition = string.Join(" AND ", pks.Select(pk => $"{pk} = @{pk}"));
-                                await using var delCmd = new NpgsqlCommand(
-                                    $"DELETE FROM {table.MasterTable} WHERE {pkCondition}", pgConn);
-                                foreach (var pk in pks)
-                                    delCmd.Parameters.AddWithValue($"@{pk}", GetRowValue(row, table, pk));
-                                await delCmd.ExecuteNonQueryAsync();
+                                var condicionPK = string.Join(" AND ", clavesPrimarias.Select(pk => $"{pk} = @{pk}"));
+                                await using var cmdDelete = new NpgsqlCommand(
+                                    $"DELETE FROM {tabla.MasterTable} WHERE {condicionPK}", conexionMaster);
+                                foreach (var pk in clavesPrimarias)
+                                    cmdDelete.Parameters.AddWithValue($"@{pk}", ObtenerValor(fila, tabla, pk));
+                                await cmdDelete.ExecuteNonQueryAsync();
                             }
-                            rows++;
+
+                            filas++;
                         }
-                        catch (Exception exRow)
+                        catch (Exception exFila)
                         {
-                            _logger.LogWarning(exRow, "SYNC-OUT fila ignorada en {Table}: {Op}", table.Name, operation);
+                            _logger.LogWarning(exFila, "Fila ignorada en {Tabla}: {Op}", tabla.Name, operacion);
                         }
                     }
 
-                    await using (var truncCmd = new SqlCommand($"DELETE FROM {table.LogTable}", sqlConn))
-                        await truncCmd.ExecuteNonQueryAsync();
+                    await using (var limpiarLog = new SqlCommand($"DELETE FROM {tabla.LogTable}", conexionSlave))
+                        await limpiarLog.ExecuteNonQueryAsync();
 
-                    result.Success = true;
-                    result.RowsAffected = rows;
-                    result.Message = $"{rows} cambios aplicados al MASTER.";
+                    resultado.Success = true;
+                    resultado.RowsAffected = filas;
+                    resultado.Message = $"{filas} cambios aplicados al MASTER.";
                 }
                 catch (Exception ex)
                 {
-                    result.Success = false;
-                    result.Message = ex.Message;
-                    _logger.LogError(ex, "SYNC-OUT error en tabla {Table}", table.Name);
+                    resultado.Success = false;
+                    resultado.Message = ex.Message;
+                    _logger.LogError(ex, "Error en Sync-OUT tabla {Tabla}", tabla.Name);
                 }
 
-                results.Add(result);
+                resultados.Add(resultado);
             }
 
-            return results;
+            return resultados;
         }
 
-        private object GetRowValue(DataRow row, TableMap table, string masterCol)
+        private void DeshabilitarConstraints(SqlConnection conexion)
         {
-            var map = table.Columns.FirstOrDefault(c => c.Master == masterCol);
-            var colName = map?.Slave ?? masterCol;
+            foreach (var tabla in TodasLasTablas)
+            {
+                try
+                {
+                    using var cmd = new SqlCommand($"ALTER TABLE {tabla} NOCHECK CONSTRAINT ALL", conexion);
+                    cmd.ExecuteNonQuery();
+                }
+                catch { }
+            }
+        }
 
-            if (row.Table.Columns.Contains(colName))
+        private void BorrarTablas(SqlConnection conexion)
+        {
+            foreach (var tabla in TodasLasTablas)
             {
-                var val = row[colName];
+                var tablaMap = _mappingService.Mapping.TablesIN.FirstOrDefault(t => t.Name == tabla);
+                if (tablaMap == null) continue;
+                try
+                {
+                    using var cmd = new SqlCommand($"DELETE FROM {tablaMap.SlaveTable}", conexion);
+                    cmd.ExecuteNonQuery();
+                }
+                catch { }
+            }
+        }
+
+        private void HabilitarConstraints(SqlConnection conexion)
+        {
+            foreach (var tabla in TodasLasTablas)
+            {
+                try
+                {
+                    using var cmd = new SqlCommand($"ALTER TABLE {tabla} WITH NOCHECK CHECK CONSTRAINT ALL", conexion);
+                    cmd.ExecuteNonQuery();
+                }
+                catch { }
+            }
+        }
+
+        private object ObtenerValor(DataRow fila, TableMap tabla, string columnaMaster)
+        {
+            var mapeo = tabla.Columns.FirstOrDefault(c => c.Master == columnaMaster);
+            var nombreColumna = mapeo?.Slave ?? columnaMaster;
+
+            if (fila.Table.Columns.Contains(nombreColumna))
+            {
+                var val = fila[nombreColumna];
                 return val == DBNull.Value ? DBNull.Value : val;
             }
-            if (row.Table.Columns.Contains(masterCol))
+
+            if (fila.Table.Columns.Contains(columnaMaster))
             {
-                var val = row[masterCol];
+                var val = fila[columnaMaster];
                 return val == DBNull.Value ? DBNull.Value : val;
             }
+
             return DBNull.Value;
         }
     }
