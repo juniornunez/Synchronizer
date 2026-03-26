@@ -1,310 +1,218 @@
 ﻿@{
-    ViewData["Title"] = "Pagila Synchronizer - Dashboard";
+    ViewData["Title"] = "Sincronizador Pagila";
     Layout = null;
 }
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pagila Synchronizer</title>
+    <title>Sincronizador Pagila - TBD2</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-
         body {
-            font-family: 'Segoe UI', sans-serif;
-            background: #0f1117;
-            color: #e2e8f0;
-            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            margin: 30px;
+            background-color: #f0f0f0;
         }
 
-        header {
-            background: linear-gradient(135deg, #1a1f2e, #2d3748);
-            padding: 20px 40px;
-            border-bottom: 1px solid #2d3748;
-            display: flex;
-            align-items: center;
-            gap: 16px;
+        h2 {
+            color: #333;
         }
 
-        header h1 {
-            font-size: 1.6rem;
-            font-weight: 700;
-            color: #63b3ed;
+        .info {
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #555;
         }
 
-        header span {
-            font-size: 0.85rem;
-            color: #718096;
+        .estado-box {
+            background: white;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 20px;
+            width: 400px;
         }
 
-        .container {
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 32px 24px;
+        .estado-box p {
+            margin: 4px 0;
+            font-size: 13px;
         }
 
-        /* ── Status Cards ── */
-        .status-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 32px;
+        .conectado { color: green; font-weight: bold; }
+        .desconectado { color: red; font-weight: bold; }
+
+        .botones {
+            margin-bottom: 20px;
         }
 
-        .status-card {
-            background: #1a1f2e;
-            border: 1px solid #2d3748;
-            border-radius: 12px;
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .status-dot {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background: #4a5568;
-            flex-shrink: 0;
-            transition: background 0.3s;
-        }
-
-        .status-dot.ok  { background: #48bb78; box-shadow: 0 0 8px #48bb78; }
-        .status-dot.err { background: #fc8181; box-shadow: 0 0 8px #fc8181; }
-
-        .status-info h3 { font-size: 0.95rem; font-weight: 600; }
-        .status-info p  { font-size: 0.78rem; color: #718096; margin-top: 2px; }
-
-        /* ── Sync Panels ── */
-        .sync-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 32px;
-        }
-
-        .sync-panel {
-            background: #1a1f2e;
-            border: 1px solid #2d3748;
-            border-radius: 12px;
-            padding: 24px;
-        }
-
-        .sync-panel h2 {
-            font-size: 1rem;
-            font-weight: 700;
-            margin-bottom: 6px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .sync-panel p {
-            font-size: 0.8rem;
-            color: #718096;
-            margin-bottom: 16px;
-        }
-
-        .badge-in  { background: #2b6cb0; color: #bee3f8; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; }
-        .badge-out { background: #276749; color: #c6f6d5; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; }
-
-        .btn {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            font-weight: 600;
+        button {
+            padding: 8px 20px;
+            margin-right: 10px;
+            font-size: 14px;
             cursor: pointer;
-            transition: opacity 0.2s, transform 0.1s;
         }
 
-        .btn:hover   { opacity: 0.88; }
-        .btn:active  { transform: scale(0.98); }
-        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        #btnSyncIn {
+            background-color: #4a90d9;
+            color: white;
+            border: none;
+        }
 
-        .btn-in  { background: linear-gradient(135deg, #2b6cb0, #3182ce); color: white; }
-        .btn-out { background: linear-gradient(135deg, #276749, #38a169); color: white; }
+        #btnSyncOut {
+            background-color: #5cb85c;
+            color: white;
+            border: none;
+        }
 
-        /* ── Log ── */
-        .log-section { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 12px; padding: 24px; }
-        .log-section h2 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
 
-        #logTable { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-        #logTable th {
-            background: #2d3748;
-            padding: 10px 12px;
+        #mensajeCargando {
+            font-size: 13px;
+            color: #888;
+            display: none;
+            margin-top: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            font-size: 13px;
+        }
+
+        table th {
+            background-color: #ddd;
+            padding: 8px;
             text-align: left;
-            font-weight: 600;
-            color: #a0aec0;
+            border: 1px solid #ccc;
         }
-        #logTable td { padding: 10px 12px; border-bottom: 1px solid #2d3748; }
-        #logTable tr:last-child td { border-bottom: none; }
 
-        .tag { padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; }
-        .tag-ok  { background: #1c4532; color: #9ae6b4; }
-        .tag-err { background: #4a1616; color: #fc8181; }
-        .tag-in  { background: #1a365d; color: #90cdf4; }
-        .tag-out { background: #1c4532; color: #9ae6b4; }
-
-        .spinner {
-            display: inline-block;
-            width: 14px; height: 14px;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-top-color: white;
-            border-radius: 50%;
-            animation: spin 0.7s linear infinite;
-            vertical-align: middle;
-            margin-right: 6px;
+        table td {
+            padding: 7px 8px;
+            border: 1px solid #ccc;
         }
-        @@keyframes spin { to { transform: rotate(360deg); } }
 
-        .empty-log { text-align: center; color: #4a5568; padding: 24px; font-size: 0.85rem; }
+        .ok { color: green; }
+        .error { color: red; }
+
+        h3 {
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
     </style>
 </head>
 <body>
 
-    <header>
-        <div>
-            <h1>⚡ Pagila Synchronizer</h1>
-            <span>Teoría de Base de Datos II — Junior Nuñez 22411198</span>
-        </div>
-    </header>
+    <h2>Sincronizador de Datos - Pagila</h2>
+    <p class="info">Proyecto 2 - Teoria de Base de Datos II &nbsp;|&nbsp; Junior Nuñez 22411198</p>
 
-    <div class="container">
-
-        <!-- Estado de conexiones -->
-        <div class="status-row">
-            <div class="status-card">
-                <div class="status-dot" id="dotMaster"></div>
-                <div class="status-info">
-                    <h3>MASTER — PostgreSQL</h3>
-                    <p id="msgMaster">Verificando conexión...</p>
-                </div>
-            </div>
-            <div class="status-card">
-                <div class="status-dot" id="dotSlave"></div>
-                <div class="status-info">
-                    <h3>SLAVE — SQL Server</h3>
-                    <p id="msgSlave">Verificando conexión...</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Botones de sincronización -->
-        <div class="sync-row">
-            <div class="sync-panel">
-                <h2><span class="badge-in">IN</span> Sync-IN</h2>
-                <p>Descarga datos del MASTER (PostgreSQL) hacia el SLAVE (SQL Server). Tablas de catálogo: actor, film, inventory, etc.</p>
-                <button class="btn btn-in" id="btnIn" onclick="runSync('in')">
-                    ▼ Ejecutar Sync-IN
-                </button>
-            </div>
-            <div class="sync-panel">
-                <h2><span class="badge-out">OUT</span> Sync-OUT</h2>
-                <p>Sube los cambios acumulados en las tablas _log del SLAVE hacia el MASTER. Tablas transaccionales: customer, rental, payment.</p>
-                <button class="btn btn-out" id="btnOut" onclick="runSync('out')">
-                    ▲ Ejecutar Sync-OUT
-                </button>
-            </div>
-        </div>
-
-        <!-- Log de resultados -->
-        <div class="log-section">
-            <h2>📋 Log de Sincronizaciones</h2>
-            <table id="logTable">
-                <thead>
-                    <tr>
-                        <th>Hora</th>
-                        <th>Operación</th>
-                        <th>Tabla</th>
-                        <th>Filas</th>
-                        <th>Estado</th>
-                        <th>Mensaje</th>
-                    </tr>
-                </thead>
-                <tbody id="logBody">
-                    <tr><td colspan="6" class="empty-log">Sin sincronizaciones ejecutadas aún.</td></tr>
-                </tbody>
-            </table>
-        </div>
-
+    <div class="estado-box">
+        <p>MASTER (PostgreSQL): <span id="estadoMaster">Verificando...</span></p>
+        <p>SLAVE (SQL Server): <span id="estadoSlave">Verificando...</span></p>
     </div>
 
-    <script>
-        // ── Verificar estado de conexiones al cargar ──
-        async function checkStatus() {
-            try {
-                const res  = await fetch('/Sync/Status');
-                const data = await res.json();
+    <div class="botones">
+        <button id="btnSyncIn" onclick="ejecutarSync('in')">Sync IN</button>
+        <button id="btnSyncOut" onclick="ejecutarSync('out')">Sync OUT</button>
+    </div>
 
-                setDot('dotMaster', 'msgMaster', data.master);
-                setDot('dotSlave',  'msgSlave',  data.slave);
-            } catch {
-                setDot('dotMaster', 'msgMaster', { connected: false, message: 'Error al verificar' });
-                setDot('dotSlave',  'msgSlave',  { connected: false, message: 'Error al verificar' });
-            }
+    <p id="mensajeCargando">Ejecutando sincronizacion, por favor espere...</p>
+
+    <h3>Log de resultados</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Hora</th>
+                <th>Operacion</th>
+                <th>Tabla</th>
+                <th>Filas</th>
+                <th>Estado</th>
+                <th>Mensaje</th>
+            </tr>
+        </thead>
+        <tbody id="logBody">
+            <tr>
+                <td colspan="6" style="color:#999; text-align:center;">No hay registros todavia.</td>
+            </tr>
+        </tbody>
+    </table>
+
+<script>
+    async function verificarEstado() {
+        try {
+            const res = await fetch('/Sync/Status');
+            const data = await res.json();
+
+            const master = document.getElementById('estadoMaster');
+            const slave = document.getElementById('estadoSlave');
+
+            master.textContent = data.master.connected ? 'Conectado' : 'Sin conexion';
+            master.className = data.master.connected ? 'conectado' : 'desconectado';
+
+            slave.textContent = data.slave.connected ? 'Conectado' : 'Sin conexion';
+            slave.className = data.slave.connected ? 'conectado' : 'desconectado';
+        } catch {
+            document.getElementById('estadoMaster').textContent = 'Error';
+            document.getElementById('estadoSlave').textContent = 'Error';
         }
+    }
 
-        function setDot(dotId, msgId, data) {
-            const dot = document.getElementById(dotId);
-            const msg = document.getElementById(msgId);
-            dot.className = 'status-dot ' + (data.connected ? 'ok' : 'err');
-            msg.textContent = data.message;
+    async function ejecutarSync(tipo) {
+        const btnIn = document.getElementById('btnSyncIn');
+        const btnOut = document.getElementById('btnSyncOut');
+        const msg = document.getElementById('mensajeCargando');
+        const url = tipo === 'in' ? '/Sync/SyncIn' : '/Sync/SyncOut';
+
+        btnIn.disabled = true;
+        btnOut.disabled = true;
+        msg.style.display = 'block';
+
+        try {
+            const res = await fetch(url, { method: 'POST' });
+            const resultados = await res.json();
+            agregarLog(resultados);
+        } catch (err) {
+            agregarLog([{
+                success: false,
+                tableName: '-',
+                rowsAffected: 0,
+                operation: tipo.toUpperCase(),
+                message: err.message
+            }]);
+        } finally {
+            btnIn.disabled = false;
+            btnOut.disabled = false;
+            msg.style.display = 'none';
         }
+    }
 
-        // ── Ejecutar sincronización ──
-        async function runSync(type) {
-            const btnId  = type === 'in' ? 'btnIn' : 'btnOut';
-            const url    = type === 'in' ? '/Sync/SyncIn' : '/Sync/SyncOut';
-            const btn    = document.getElementById(btnId);
-            const label  = btn.textContent;
+    function agregarLog(resultados) {
+        const tbody = document.getElementById('logBody');
 
-            btn.disabled = true;
-            btn.innerHTML = `<span class="spinner"></span> Sincronizando...`;
+        const vacio = tbody.querySelector('td[colspan]');
+        if (vacio) vacio.parentElement.remove();
 
-            try {
-                const res     = await fetch(url, { method: 'POST', headers: { 'RequestVerificationToken': '' } });
-                const results = await res.json();
-                appendLog(results);
-            } catch (err) {
-                appendLog([{ success: false, tableName: '—', rowsAffected: 0, operation: type.toUpperCase(), message: err.message }]);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = label;
-            }
-        }
+        const hora = new Date().toLocaleTimeString('es-HN');
 
-        // ── Agregar filas al log ──
-        function appendLog(results) {
-            const tbody = document.getElementById('logBody');
+        resultados.forEach(r => {
+            const fila = document.createElement('tr');
+            fila.innerHTML = `
+                <td>${hora}</td>
+                <td>${r.operation}</td>
+                <td>${r.tableName}</td>
+                <td>${r.rowsAffected}</td>
+                <td class="${r.success ? 'ok' : 'error'}">${r.success ? 'OK' : 'ERROR'}</td>
+                <td>${r.message}</td>
+            `;
+            tbody.insertBefore(fila, tbody.firstChild);
+        });
+    }
 
-            // Quitar mensaje vacío si existe
-            const empty = tbody.querySelector('.empty-log');
-            if (empty) empty.parentElement.remove();
-
-            const now = new Date().toLocaleTimeString('es-HN');
-
-            results.forEach(r => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${now}</td>
-                    <td><span class="tag ${r.operation === 'SYNC-IN' ? 'tag-in' : 'tag-out'}">${r.operation}</span></td>
-                    <td>${r.tableName}</td>
-                    <td>${r.rowsAffected}</td>
-                    <td><span class="tag ${r.success ? 'tag-ok' : 'tag-err'}">${r.success ? 'OK' : 'ERROR'}</span></td>
-                    <td>${r.message}</td>
-                `;
-                tbody.insertBefore(tr, tbody.firstChild);
-            });
-        }
-
-        // ── Al cargar la página ──
-        checkStatus();
-        setInterval(checkStatus, 30000);
-    </script>
+    verificarEstado();
+    setInterval(verificarEstado, 30000);
+</script>
 
 </body>
 </html>
